@@ -8,6 +8,11 @@ use crate::params::LLamaParams;
 use crate::tensor::Tensor;
 use safetensors::SafeTensors;
 use std::path::Path;
+
+use crate::operators::rms_norm;
+use crate::operators::matmul_transb;
+use crate::operators::swiglu;
+
 pub struct Llama<T> {
     vocab: usize,           // vocab size
     n_layers: usize,        // number of layers
@@ -167,7 +172,32 @@ fn mlp(
     rms_w: &Tensor<f32>,
     eps: f32,
 ) {
-    todo!("Implement mlp");
+    //todo!("Implement mlp");
+    // Step 1: RMS Normalization
+    rms_norm(hidden_states, &residual, &rms_w, eps);
+
+    // Step 2: Matrix Multiplication for gate
+    matmul_transb(gate, 0.0, hidden_states, w_gate, 1.0);
+
+    // Step 3: Matrix Multiplication for up
+    matmul_transb(up, 0.0, hidden_states, w_up, 1.0);
+    
+    //swiglu(&mut up, &gate);
+    // Step 4: SwiGLU Activation
+    //let mut act = Tensor::new(vec![0.0; gate.size()], gate.shape());
+    swiglu(up, gate);
+
+    // Step 5: Matrix Multiplication for output
+    //let mut output = Tensor::new(vec![0.0; up.size()], up.shape());
+    matmul_transb(hidden_states, 0.0, up, w_down, 1.0);
+
+    // Step 6: Residual Connection
+    for i in 0..residual.size() {
+        unsafe{
+            residual.data_mut()[i] += hidden_states.data()[i];
+        }
+    }
+
 }
 
 #[test]
@@ -214,6 +244,7 @@ pub fn test_load_safetensors() {
     use crate::tensor::float_eq;
     let project_dir = env!("CARGO_MANIFEST_DIR");
     let model_dir = PathBuf::from(project_dir).join("models").join("story");
+    //println!("Model directory: {}", model_dir.display());
     let model = Llama::from_safetensors(model_dir);
     assert_eq!(model.vocab, 2048);
     assert_eq!(model.n_layers, 2);

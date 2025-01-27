@@ -71,25 +71,82 @@ pub fn masked_softmax(y: &mut Tensor<f32>) {
 }
 
 pub fn rms_norm(y: &mut Tensor<f32>, x: &Tensor<f32>, w: &Tensor<f32>, epsilon: f32) {
-    todo!("实现 rms_norm，计算前做一些必要的检查会帮助你后续调试")
+    //todo!("实现 rms_norm，计算前做一些必要的检查会帮助你后续调试")
+    // 获取张量的形状
+    let x_shape = x.shape();
+    let w_shape = w.shape();
+    let n = *x_shape.last().unwrap();
+
+    // 检查输入张量的形状
+    assert!(w_shape == &[n], "权重向量 w 的长度必须与 X 的最后一维相同");
+    assert!(y.shape() == x_shape, "输出张量 Y 的形状必须与 X 相同");
+
+    let x_data = x.data();
+    let w_data = w.data();
+    let y_data = unsafe{y.data_mut()};
+
+    for i in 0..x_shape[0]{
+        let mut squre_sum = 0.0;
+        for j in 0..n{
+            squre_sum += x_data[i * n + j] * x_data[i * n + j];
+        }
+        let norm_factor = (epsilon + squre_sum / n as f32).sqrt();
+        for j in 0..n{
+            y_data[i * n + j] = x_data[i * n + j] * w_data[j] / norm_factor;
+        }
+
+    }
+
 }
+
 
 // y = silu(x) * y
 // hint: this is an element-wise operation
 pub fn swiglu(y: &mut Tensor<f32>, x: &Tensor<f32>) {
-    // let len = y.size();
-    // assert!(len == x.size());
+    let len = y.size();
+    assert!(len == x.size(), "输入张量 x 和 y 的长度必须相同");
 
-    // let _y = unsafe { y.data_mut() };
-    // let _x = x.data();
+    let _y = unsafe { y.data_mut() };
+    let _x = x.data();
 
-    todo!("实现 silu，这里给了一些前期准备工作的提示，你可以参考")
+    for i in 0..len {
+        let sigmod_x = 1.0 / (1.0 + (-_x[i]).exp());
+        let silu_x = _x[i] * sigmod_x;
+        _y[i] = silu_x * _y[i];
+    }
+
+    //todo!("实现 silu，这里给了一些前期准备工作的提示，你可以参考")
 }
 
 // C = beta * C + alpha * A @ B^T
 // hint: You don't need to do an explicit transpose of B
 pub fn matmul_transb(c: &mut Tensor<f32>, beta: f32, a: &Tensor<f32>, b: &Tensor<f32>, alpha: f32) {
-    todo!("实现 matmul_transb，计算前做一些必要的检查会帮助你后续调试");
+    //todo!("实现 matmul_transb，计算前做一些必要的检查会帮助你后续调试");
+    let m = a.shape()[0];
+    let n = b.shape()[0];
+    let k = a.shape()[1];
+
+    println!("matmul_transb: m={}, n={}, k={}", m, n, k);
+
+    // 检查输入张量的形状
+    assert!(a.shape() == &[m, k], "A 的形状必须是 [m, k]");
+    assert!(b.shape() == &[n, k], "B 的形状必须是 [n, k]");
+    assert!(c.shape() == &[m, n], "C 的形状必须是 [m, n]");
+
+    let a_data = a.data();
+    let b_data = b.data();
+    let c_data = unsafe { c.data_mut() };
+
+    for i in 0..m {
+        for j in 0..n {
+            let mut sum = 0.0;
+            for p in 0..k {
+                sum += a_data[i * k + p] * b_data[j * k + p];
+            }
+            c_data[i * n + j] = beta * c_data[i * n + j] + alpha * sum;
+        }
+    }
+    
 }
 
 // Dot product of two tensors (treated as vectors)
