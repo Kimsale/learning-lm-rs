@@ -34,7 +34,6 @@ impl LLamaParams<f32> {
     }
 } */
 
-
 use crate::config::LlamaConfigJson;
 use crate::tensor::Tensor;
 use safetensors::SafeTensors;
