@@ -10,3 +10,12 @@ safetensors = "0.4.3"
 tokenizers = "0.19.1"
 rand = "0.8"
 byteorder = "1.4"
+clap = { version = "4.0", features = ["derive"] }
+half = "1.8.1"
+eframe = "0.31.1"
+egui = "0.31.1"
+tokio = { version = "1.0", features = ["full"] }
+futures = "0.3"
+
+[features]
+mixed_precision = []
